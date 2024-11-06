@@ -1,10 +1,12 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_naver_map/flutter_naver_map.dart';
+import 'package:naver_map_test/constant/constants.dart';
+import 'package:permission_handler/permission_handler.dart';
 
 void main() async {
   WidgetsFlutterBinding.ensureInitialized();
   await NaverMapSdk.instance.initialize(
-    clientId: '',
+    clientId: Constants.naverClintId,
     onAuthFailed: (ex) {
       debugPrint('네이버맵 인증 실패: $ex');
     },
@@ -39,15 +41,24 @@ class MyHomePage extends StatefulWidget {
 
 class _MyHomePageState extends State<MyHomePage> {
   late NaverMapController mapController;
-  // 세개의 오버레이 생성
-  // (37.5596985, 126.9462753)
-  // final marker1 = NMarker(id: '1', position: NLatLng(37.5596985, 126.9462753));
-  // final marker2 = NMarker(id: '2', position: latLng2);
-  // final circle = NCircleOverlay(id: '1', center: latLng3);
+  bool isLoading = true;
+
+  Future<void> getPermission() async {
+    try {
+      if (await Permission.locationWhenInUse.request().isGranted) {
+        setState(() {
+          isLoading = false;
+        });
+      }
+    } catch (e) {
+      debugPrint('getPermission error: $e');
+    }
+  }
 
   @override
   void initState() {
     super.initState();
+    getPermission();
   }
 
   @override
@@ -57,23 +68,27 @@ class _MyHomePageState extends State<MyHomePage> {
         backgroundColor: Theme.of(context).colorScheme.inversePrimary,
         title: Text(widget.title),
       ),
-      body: NaverMap(
-        options: const NaverMapViewOptions(locationButtonEnable: true), // 지도 옵션을 설정할 수 있습니다.
-        forceGesture: false, // 지도에 전달되는 제스처 이벤트의 우선순위를 가장 높게 설정할지 여부를 지정합니다.
-        onMapReady: (controller) async {
-          mapController = controller;
-          const iconImage = NOverlayImage.fromAssetImage('images/fire.png');
-          final marker1 = NMarker(id: '1', position: const NLatLng(37.5596985, 126.9462753), icon: iconImage);
-          final locationOverlay = mapController.getLocationOverlay();
-          mapController.addOverlayAll({marker1});
-          mapController.setLocationTrackingMode(NLocationTrackingMode.follow);
-        },
-        onMapTapped: (point, latLng) {},
-        onSymbolTapped: (symbol) {},
-        onCameraChange: (position, reason) {},
-        onCameraIdle: () {},
-        onSelectedIndoorChanged: (indoor) {},
-      ),
+      body: isLoading
+          ? Container()
+          : NaverMap(
+              options: const NaverMapViewOptions(
+                locationButtonEnable: true,
+              ),
+              forceGesture: false, // 지도에 전달되는 제스처 이벤트의 우선순위를 가장 높게 설정할지 여부를 지정합니다.
+              onMapReady: (controller) async {
+                mapController = controller;
+                const iconImage = NOverlayImage.fromAssetImage('images/fire.png');
+                final marker1 = NMarker(id: '1', position: const NLatLng(37.5596985, 126.9462753), icon: iconImage);
+                final locationOverlay = mapController.getLocationOverlay();
+                mapController.addOverlayAll({marker1});
+                mapController.setLocationTrackingMode(NLocationTrackingMode.follow);
+              },
+              onMapTapped: (point, latLng) {},
+              onSymbolTapped: (symbol) {},
+              onCameraChange: (position, reason) {},
+              onCameraIdle: () {},
+              onSelectedIndoorChanged: (indoor) {},
+            ),
     );
   }
 }
